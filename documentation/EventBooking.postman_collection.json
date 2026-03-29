@@ -1,0 +1,362 @@
+{
+	"info": {
+		"name": "EventBooking API",
+		"description": "Laravel Sanctum Bearer token. After login, paste the token into the collection variable.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "event_id",
+			"value": "1"
+		},
+		{
+			"key": "ticket_id",
+			"value": "1"
+		},
+		{
+			"key": "booking_id",
+			"value": "1"
+		},
+		{
+			"key": "payment_id",
+			"value": "1"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Demo User\",\n  \"email\": \"demo@example.com\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"phone\": null\n}"
+						},
+						"url": "{{base_url}}/register"
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin1@eventbooking.test\",\n  \"password\": \"password\"\n}"
+						},
+						"url": "{{base_url}}/login"
+					}
+				},
+				{
+					"name": "Me",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/me"
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/logout"
+					}
+				}
+			]
+		},
+		{
+			"name": "Events (public)",
+			"item": [
+				{
+					"name": "List events",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/events?per_page=15&search=&from=&to=&location="
+					}
+				},
+				{
+					"name": "Show event",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/events/{{event_id}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Organizer / Admin",
+			"item": [
+				{
+					"name": "Create event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New event\",\n  \"description\": \"Description\",\n  \"date\": \"2026-12-01T18:00:00+03:00\",\n  \"location\": \"Istanbul\"\n}"
+						},
+						"url": "{{base_url}}/events"
+					}
+				},
+				{
+					"name": "Update event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated title\",\n  \"description\": null,\n  \"date\": \"2026-12-01T19:00:00+03:00\",\n  \"location\": \"Ankara\"\n}"
+						},
+						"url": "{{base_url}}/events/{{event_id}}"
+					}
+				},
+				{
+					"name": "Delete event",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/events/{{event_id}}"
+					}
+				},
+				{
+					"name": "Create ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"Standard\",\n  \"price\": 99.99,\n  \"quantity\": 100\n}"
+						},
+						"url": "{{base_url}}/events/{{event_id}}/tickets"
+					}
+				},
+				{
+					"name": "Update ticket",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"VIP\",\n  \"price\": 199.99,\n  \"quantity\": 50\n}"
+						},
+						"url": "{{base_url}}/tickets/{{ticket_id}}"
+					}
+				},
+				{
+					"name": "Delete ticket",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/tickets/{{ticket_id}}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Customer / Admin",
+			"item": [
+				{
+					"name": "List my bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/bookings"
+					}
+				},
+				{
+					"name": "Create booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 1\n}"
+						},
+						"url": "{{base_url}}/tickets/{{ticket_id}}/bookings"
+					}
+				},
+				{
+					"name": "Cancel booking",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/bookings/{{booking_id}}/cancel"
+					}
+				},
+				{
+					"name": "Process payment (mock)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"simulate_failure\": false\n}"
+						},
+						"url": "{{base_url}}/bookings/{{booking_id}}/payment"
+					}
+				},
+				{
+					"name": "Show payment",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/payments/{{payment_id}}"
+					}
+				}
+			]
+		}
+	]
+}

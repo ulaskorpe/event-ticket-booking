@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Enums\BookingStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreBookingRequest;
+use App\Http\Requests\Api\StoreOrganizerBookingRequest;
+use App\Http\Resources\BookingResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Booking;
 use App\Models\Ticket;
@@ -28,16 +31,12 @@ class BookingController extends Controller
 
         $bookings = $query->orderByDesc('created_at')->paginate((int) $request->query('per_page', 15));
 
-        return ApiResponse::paginated($bookings, 'Bookings retrieved.');
+        return ApiResponse::paginatedResources($request, $bookings, BookingResource::class, 'Bookings retrieved.');
     }
 
-    public function store(Request $request, Ticket $ticket): JsonResponse
+    public function store(StoreBookingRequest $request, Ticket $ticket): JsonResponse
     {
-        $validated = $request->validate([
-            'quantity' => ['required', 'integer', 'min:1'],
-        ]);
-
-        $quantity = (int) $validated['quantity'];
+        $quantity = (int) $request->validated('quantity');
 
         /** @var JsonResponse $response */
         $response = DB::transaction(function () use ($request, $ticket, $quantity) {
@@ -63,10 +62,85 @@ class BookingController extends Controller
 
             $booking->load(['ticket.event', 'payment']);
 
-            return ApiResponse::created($booking, 'Booking created.');
+            return ApiResponse::created(
+                (new BookingResource($booking))->resolve($request),
+                'Booking created.'
+            );
         });
 
         return $response;
+    }
+
+    /**
+     * Organizer/admin creates a booking on behalf of a customer (dashboard / back-office).
+     */
+    public function storeForCustomer(StoreOrganizerBookingRequest $request, Ticket $ticket): JsonResponse
+    {
+        $quantity = (int) $request->validated('quantity');
+        $userId = (int) $request->validated('user_id');
+
+        /** @var JsonResponse $response */
+        $response = DB::transaction(function () use ($request, $ticket, $quantity, $userId) {
+            $locked = Ticket::query()->whereKey($ticket->id)->lockForUpdate()->firstOrFail();
+
+            $sold = $locked->bookings()
+                ->whereIn('status', [BookingStatus::Pending, BookingStatus::Confirmed])
+                ->sum('quantity');
+
+            if ($sold + $quantity > $locked->quantity) {
+                return ApiResponse::failure(
+                    'Not enough tickets available.',
+                    JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+
+            $alreadyBooked = Booking::query()
+                ->where('user_id', $userId)
+                ->where('ticket_id', $locked->id)
+                ->whereIn('status', [BookingStatus::Pending, BookingStatus::Confirmed])
+                ->exists();
+
+            if ($alreadyBooked) {
+                return ApiResponse::failure(
+                    'This customer already has an active booking for this ticket.',
+                    JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+
+            $booking = Booking::query()->create([
+                'user_id' => $userId,
+                'ticket_id' => $locked->id,
+                'quantity' => $quantity,
+                'status' => BookingStatus::Pending,
+            ]);
+
+            $booking->load(['ticket.event', 'payment']);
+
+            return ApiResponse::created(
+                (new BookingResource($booking))->resolve($request),
+                'Booking created.'
+            );
+        });
+
+        return $response;
+    }
+
+    public function approve(Request $request, Booking $booking): JsonResponse
+    {
+        if ($booking->status !== BookingStatus::Pending) {
+            return ApiResponse::failure(
+                'Only pending bookings can be approved.',
+                JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
+        $booking->update(['status' => BookingStatus::Confirmed]);
+        $booking->load(['ticket.event', 'payment']);
+
+        return ApiResponse::success(
+            (new BookingResource($booking))->resolve($request),
+            'Booking approved.'
+        );
     }
 
     public function cancel(Request $request, Booking $booking): JsonResponse
@@ -81,6 +155,9 @@ class BookingController extends Controller
         $booking->update(['status' => BookingStatus::Cancelled]);
         $booking->load(['ticket.event', 'payment']);
 
-        return ApiResponse::success($booking, 'Booking cancelled.');
+        return ApiResponse::success(
+            (new BookingResource($booking))->resolve($request),
+            'Booking cancelled.'
+        );
     }
 }

@@ -1,0 +1,394 @@
+{
+	"info": {
+		"_postman_id": "6b01b554-bb4c-4824-9979-2b6493adf61c",
+		"name": "event-ticket-api",
+		"description": "EventBooking Laravel API. Set collection variables: base_url (e.g. http://localhost:8000/api), token (paste from login/register response data.token). Sanctum: Authorization Bearer.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "18218528",
+		"_collection_link": "https://martian-comet-577052.postman.co/workspace/meducrm~ee19b989-9535-48d7-8bc1-a12cfb3da307/collection/18218528-6b01b554-bb4c-4824-9979-2b6493adf61c?action=share&source=collection_link&creator=18218528"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "event_id",
+			"value": "1"
+		},
+		{
+			"key": "ticket_id",
+			"value": "1"
+		},
+		{
+			"key": "booking_id",
+			"value": "1"
+		},
+		{
+			"key": "payment_id",
+			"value": "1"
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"description": "Public: register & login. Authenticated: logout & me.",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Demo Customer\",\n  \"email\": \"customer-demo@example.com\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"phone\": null\n}"
+						},
+						"url": "{{base_url}}/register",
+						"description": "POST /api/register — creates customer role user; returns data.token."
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin1@eventbooking.test\",\n  \"password\": \"password\"\n}"
+						},
+						"url": "{{base_url}}/login",
+						"description": "POST /api/login — seed admins: admin1@eventbooking.test / password; organizers: organizer1@eventbooking.test …"
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": "{{base_url}}/logout",
+						"description": "POST /api/logout — auth:sanctum"
+					}
+				},
+				{
+					"name": "Me",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/me",
+						"description": "GET /api/me — current user (UserResource)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Events (public)",
+			"description": "No authentication required.",
+			"item": [
+				{
+					"name": "List events",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/events?per_page=15&search=&from=&to=&location=",
+						"description": "GET /api/events — query: per_page, search, from, to, location (optional). Paginated EventResource items."
+					}
+				},
+				{
+					"name": "Show event",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/events/{{event_id}}",
+						"description": "GET /api/events/{event} — EventResource with tickets & creator"
+					}
+				}
+			]
+		},
+		{
+			"name": "Organizer / Admin",
+			"description": "Requires Bearer token. isOrganizer: Admin or Organizer. Update/destroy event and tickets: must own the event/ticket.",
+			"item": [
+				{
+					"name": "Create event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"New event\",\n  \"description\": \"Optional description\",\n  \"date\": \"2026-12-01T18:00:00+00:00\",\n  \"location\": \"Istanbul\"\n}"
+						},
+						"url": "{{base_url}}/events",
+						"description": "POST /api/events — StoreEventRequest: title, description?, date, location"
+					}
+				},
+				{
+					"name": "Update event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated title\",\n  \"description\": null,\n  \"date\": \"2026-12-02T18:00:00+00:00\",\n  \"location\": \"Ankara\"\n}"
+						},
+						"url": "{{base_url}}/events/{{event_id}}",
+						"description": "PUT /api/events/{event} — UpdateEventRequest: sometimes title, description, date, location. PATCH also accepted by Laravel."
+					}
+				},
+				{
+					"name": "Delete event",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/events/{{event_id}}",
+						"description": "DELETE /api/events/{event}"
+					}
+				},
+				{
+					"name": "Create ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"Standard\",\n  \"price\": 99.99,\n  \"quantity\": 100\n}"
+						},
+						"url": "{{base_url}}/events/{{event_id}}/tickets",
+						"description": "POST /api/events/{event}/tickets — StoreTicketRequest: type, price, quantity"
+					}
+				},
+				{
+					"name": "Update ticket",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"VIP\",\n  \"price\": 199.99,\n  \"quantity\": 50\n}"
+						},
+						"url": "{{base_url}}/tickets/{{ticket_id}}",
+						"description": "PUT /api/tickets/{ticket} — UpdateTicketRequest: sometimes type, price, quantity"
+					}
+				},
+				{
+					"name": "Delete ticket",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/tickets/{{ticket_id}}",
+						"description": "DELETE /api/tickets/{ticket}"
+					}
+				}
+			]
+		},
+		{
+			"name": "Bookings & Payments (Customer / Admin)",
+			"description": "isCustomer middleware: Admin or Customer. Booking/payment routes use ownership middleware where applicable.",
+			"item": [
+				{
+					"name": "List my bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/bookings",
+						"description": "GET /api/bookings"
+					}
+				},
+				{
+					"name": "Create booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 1\n}"
+						},
+						"url": "{{base_url}}/tickets/{{ticket_id}}/bookings",
+						"description": "POST /api/tickets/{ticket}/bookings — StoreBookingRequest: quantity (min 1). Middleware: prevent.double.booking"
+					}
+				},
+				{
+					"name": "Cancel booking",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": "{{base_url}}/bookings/{{booking_id}}/cancel",
+						"description": "PUT /api/bookings/{booking}/cancel — customer.owns.booking"
+					}
+				},
+				{
+					"name": "Process payment (mock)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"simulate_failure\": false\n}"
+						},
+						"url": "{{base_url}}/bookings/{{booking_id}}/payment",
+						"description": "POST /api/bookings/{booking}/payment — ProcessPaymentRequest: simulate_failure? (boolean). customer.owns.booking"
+					}
+				},
+				{
+					"name": "Show payment",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{base_url}}/payments/{{payment_id}}",
+						"description": "GET /api/payments/{payment} — payment.access (customer: own booking’s payment; admin: any)"
+					}
+				}
+			]
+		}
+	]
+}

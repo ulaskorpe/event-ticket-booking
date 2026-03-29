@@ -3,83 +3,92 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreEventRequest;
+use App\Http\Requests\Api\UpdateEventRequest;
+use App\Http\Resources\EventResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Event;
+use App\Services\EventCacheService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class EventController extends Controller
 {
+    public function __construct(
+        private readonly EventCacheService $eventCache
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $query = Event::query()->with('creator:id,name,email');
+        $paginator = $this->eventCache->rememberIndex($request, function () use ($request) {
+            $query = Event::query()->with('creator');
 
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', '%'.$search.'%')
-                    ->orWhere('location', 'like', '%'.$search.'%')
-                    ->orWhere('description', 'like', '%'.$search.'%');
-            });
-        }
+            if ($search = $request->query('search')) {
+                $query->where(function ($q) use ($search) {
+                    $q->searchByTitle($search)
+                        ->orWhere('location', 'like', '%'.$search.'%')
+                        ->orWhere('description', 'like', '%'.$search.'%');
+                });
+            }
 
-        if ($request->filled('from')) {
-            $query->whereDate('date', '>=', $request->query('from'));
-        }
+            $query->filterByDate(
+                $request->query('from'),
+                $request->query('to'),
+                'date'
+            );
 
-        if ($request->filled('to')) {
-            $query->whereDate('date', '<=', $request->query('to'));
-        }
+            if ($location = $request->query('location')) {
+                $query->where('location', 'like', '%'.$location.'%');
+            }
 
-        if ($location = $request->query('location')) {
-            $query->where('location', 'like', '%'.$location.'%');
-        }
+            return $query->orderBy('date')->paginate((int) $request->query('per_page', 15));
+        });
 
-        $events = $query->orderBy('date')->paginate((int) $request->query('per_page', 15));
-
-        return ApiResponse::paginated($events, 'Events retrieved.');
+        return ApiResponse::paginatedResources($request, $paginator, EventResource::class, 'Events retrieved.');
     }
 
-    public function show(Event $event): JsonResponse
+    public function show(Request $request, Event $event): JsonResponse
     {
-        $event->load(['tickets', 'creator:id,name,email']);
+        $event = $this->eventCache->rememberShow($event->id, function () use ($event) {
+            $event->load(['tickets', 'creator']);
 
-        return ApiResponse::success($event, 'Event retrieved.');
+            return $event;
+        });
+
+        return ApiResponse::success(
+            (new EventResource($event))->resolve($request),
+            'Event retrieved.'
+        );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreEventRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'date' => ['required', 'date'],
-            'location' => ['required', 'string', 'max:255'],
-        ]);
-
+        $validated = $request->validated();
         $validated['created_by'] = $request->user()->id;
 
         $event = Event::query()->create($validated);
-        $event->load('creator:id,name,email');
+        $event->load(['tickets', 'creator']);
 
-        return ApiResponse::created($event, 'Event created.');
+        return ApiResponse::created(
+            (new EventResource($event))->resolve($request),
+            'Event created.'
+        );
     }
 
-    public function update(Request $request, Event $event): JsonResponse
+    public function update(UpdateEventRequest $request, Event $event): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => ['sometimes', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'date' => ['sometimes', 'date'],
-            'location' => ['sometimes', 'string', 'max:255'],
-        ]);
+        $event->update($request->validated());
+        $event->load(['tickets', 'creator']);
 
-        $event->update($validated);
-        $event->load(['tickets', 'creator:id,name,email']);
-
-        return ApiResponse::success($event, 'Event updated.');
+        return ApiResponse::success(
+            (new EventResource($event))->resolve($request),
+            'Event updated.'
+        );
     }
 
     public function destroy(Event $event): JsonResponse
     {
+        // Tickets, bookings, and payments are removed via DB cascade (event_id → ticket_id → booking_id).
         $event->delete();
 
         return ApiResponse::success(null, 'Event deleted.');

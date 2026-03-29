@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ApiLoginRequest;
 use App\Http\Requests\Api\RegisterRequest;
+use App\Http\Resources\UserResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,7 @@ class AuthController extends Controller
         $token = $user->createToken('api')->plainTextToken;
 
         return ApiResponse::created([
-            'user' => $this->userPayload($user),
+            'user' => (new UserResource($user))->resolve($request),
             'token' => $token,
         ], 'Registration successful.');
     }
@@ -48,7 +49,7 @@ class AuthController extends Controller
         $token = $user->createToken('api')->plainTextToken;
 
         return ApiResponse::success([
-            'user' => $this->userPayload($user),
+            'user' => (new UserResource($user))->resolve($request),
             'token' => $token,
         ], 'Login successful.');
     }
@@ -63,21 +64,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return ApiResponse::success([
-            'user' => $this->userPayload($request->user()),
+            'user' => (new UserResource($request->user()))->resolve($request),
         ], 'OK.');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function userPayload(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'role' => $user->role->value,
-        ];
     }
 }

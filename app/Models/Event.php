@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CommonQueryScopes;
 use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Event extends Model
 {
     /** @use HasFactory<EventFactory> */
-    use HasFactory;
+    use CommonQueryScopes, HasFactory;
 
     /**
      * @var list<string>

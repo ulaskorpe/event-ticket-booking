@@ -17,6 +17,9 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+    /** Sanctum personal access token name for the web (Blade) dashboard. */
+    public const WEB_DASHBOARD_TOKEN_NAME = 'web-dashboard';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -70,5 +73,23 @@ class User extends Authenticatable
     public function payments(): HasManyThrough
     {
         return $this->hasManyThrough(Payment::class, Booking::class);
+    }
+
+    /**
+     * Önceki web-dashboard tokenlarını silip yeni plain token döner (session’a yazmak için).
+     */
+    public function refreshWebDashboardToken(): string
+    {
+        $this->tokens()->where('name', self::WEB_DASHBOARD_TOKEN_NAME)->delete();
+
+        return $this->createToken(self::WEB_DASHBOARD_TOKEN_NAME)->plainTextToken;
+    }
+
+    /**
+     * Revokes all web-dashboard tokens (e.g. on logout).
+     */
+    public function revokeWebDashboardTokens(): void
+    {
+        $this->tokens()->where('name', self::WEB_DASHBOARD_TOKEN_NAME)->delete();
     }
 }

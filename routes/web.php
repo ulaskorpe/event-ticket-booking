@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\WebAuthController;
+use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\EventTicketsController;
+use App\Http\Controllers\Web\TicketBookingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -17,7 +20,9 @@ Route::middleware('web.auth')->group(function () {
         return redirect()->route('dashboard');
     });
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard/events/{event}/tickets', EventTicketsController::class)
+        ->name('dashboard.events.tickets');
+    Route::get('/dashboard/events/{event}/tickets/{ticket}/bookings', TicketBookingsController::class)
+        ->name('dashboard.events.tickets.bookings');
 });

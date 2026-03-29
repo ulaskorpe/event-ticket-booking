@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\BookingStatus;
-use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ProcessPaymentRequest;
+use App\Http\Resources\PaymentResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Booking;
 use App\Models\Payment;
@@ -18,12 +19,8 @@ class PaymentController extends Controller
         private readonly PaymentService $paymentService
     ) {}
 
-    public function store(Request $request, Booking $booking): JsonResponse
+    public function store(ProcessPaymentRequest $request, Booking $booking): JsonResponse
     {
-        $request->validate([
-            'simulate_failure' => ['sometimes', 'boolean'],
-        ]);
-
         $booking->loadMissing(['payment', 'ticket']);
 
         if ($booking->status === BookingStatus::Cancelled) {
@@ -40,24 +37,27 @@ class PaymentController extends Controller
             );
         }
 
-        $payment = $this->paymentService->mockCharge(
-            $booking,
-            $request->boolean('simulate_failure')
+        $forceFailure = $request->has('simulate_failure')
+            ? $request->boolean('simulate_failure')
+            : null;
+
+        $payment = $this->paymentService->processPayment($booking, $forceFailure);
+
+        $payment->load(['booking.ticket.event']);
+
+        return ApiResponse::created(
+            (new PaymentResource($payment))->resolve($request),
+            'Payment processed (mock).'
         );
-
-        if ($payment->status === PaymentStatus::Success) {
-            $booking->update(['status' => BookingStatus::Confirmed]);
-        }
-
-        $payment->load('booking.ticket.event');
-
-        return ApiResponse::created($payment, 'Payment processed (mock).');
     }
 
-    public function show(Payment $payment): JsonResponse
+    public function show(Request $request, Payment $payment): JsonResponse
     {
         $payment->load(['booking.ticket.event']);
 
-        return ApiResponse::success($payment, 'Payment retrieved.');
+        return ApiResponse::success(
+            (new PaymentResource($payment))->resolve($request),
+            'Payment retrieved.'
+        );
     }
 }

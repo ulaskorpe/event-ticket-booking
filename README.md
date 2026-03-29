@@ -1,59 +1,151 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# EventBooking
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel-based event and ticket booking API. Authentication uses **Laravel Sanctum** (Bearer token).
 
-## About Laravel
+## Requirements
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+
+- Composer
+- MySQL / MariaDB (or SQLite for local development)
+- `ext-pdo` and your database driver
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-## Learning Laravel
+Configure the database in `.env` (see the example below), then:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+If you use the queue (e.g. for notifications):
 
-## Laravel Sponsors
+```bash
+php artisan queue:work
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Development server:
 
-### Premium Partners
+```bash
+php artisan serve
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+API base URL: `http://localhost:8000/api`
 
-## Contributing
+## Sanctum
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- For mobile / stateless clients: the `Authorization: Bearer {token}` header is enough (no cookie required).
+- For SPA + same-domain cookie sessions, configure `config/sanctum.php` and `SANCTUM_STATEFUL_DOMAINS` in `.env` per the official [Sanctum documentation](https://laravel.com/docs/sanctum).
 
-## Code of Conduct
+## `.env` summary
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The variables below are typically important for this project. See `.env.example` in the repo for the full template.
 
-## Security Vulnerabilities
+```env
+APP_NAME=EventBooking
+APP_URL=http://localhost:8000
+APP_KEY=   # php artisan key:generate
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=event_booking
+DB_USERNAME=root
+DB_PASSWORD=
 
-## License
+# Cache / session (tables created by migrations)
+CACHE_STORE=database
+SESSION_DRIVER=database
+QUEUE_CONNECTION=database
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Seed data
+
+When you run `php artisan db:seed` (`DatabaseSeeder` → `EventBookingSeeder`):
+
+| Entity    | Count |
+|-----------|-------|
+| Admin     | 2     |
+| Organizer | 3     |
+| Customer  | 10    |
+| Event     | 5     |
+| Ticket    | 15    |
+| Booking   | 20 (confirmed) |
+| Payment   | 20 (one successful payment per booking) |
+
+**Password for all seeded users:** `password`
+
+Fixed email addresses:
+
+- `admin1@eventbooking.test`, `admin2@eventbooking.test`
+- `organizer1@eventbooking.test` … `organizer3@eventbooking.test`
+
+## API response format
+
+All JSON responses are wrapped by `App\Http\Responses\ApiResponse`:
+
+**Success:**
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": { },
+  "errors": null
+}
+```
+
+**Error:**
+
+```json
+{
+  "success": false,
+  "message": "Description",
+  "data": null,
+  "errors": { "field": ["message"] }
+}
+```
+
+**Paginated list (`data`):** `items`, `meta` (current_page, last_page, per_page, total, …), `links`.
+
+Records are returned via `EventResource`, `BookingResource`, etc.
+
+## Authentication
+
+| Action   | Endpoint              | Body |
+|----------|-----------------------|------|
+| Register | `POST /api/register`  | `name`, `email`, `password`, `password_confirmation`, `phone?` |
+| Login    | `POST /api/login`     | `email`, `password` |
+| Logout   | `POST /api/logout`    | Bearer token |
+| Profile  | `GET /api/me`         | Bearer token |
+
+Use the `data.token` field from login/register responses as `Authorization: Bearer ...` on subsequent requests.
+
+## Roles and endpoints (summary)
+
+- **Public:** `GET /api/events`, `GET /api/events/{event}`
+- **Organizer or Admin:** create events; update/delete own events; related ticket CRUD (where applicable)
+- **Customer or Admin:** own bookings, book tickets, cancel, pay, view own payment
+
+Import `documentation/EventBooking.postman_collection.json` into Postman for full paths and example requests.
+
+## Tests
+
+```bash
+cp .env.testing.example .env.testing
+# Configure the test database in .env.testing
+
+php artisan test
+```
+
+## Postman
+
+Collection: [documentation/EventBooking.postman_collection.json](documentation/EventBooking.postman_collection.json)
+
+Import: Postman → Import → select this file. Set collection variables `base_url` (e.g. `http://localhost:8000/api`) and `token` (after login).

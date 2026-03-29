@@ -4,6 +4,8 @@ namespace App\Http\Responses;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Consistent JSON envelope for API responses.
@@ -64,5 +66,23 @@ final class ApiResponse
                 'next' => $paginator->nextPageUrl(),
             ],
         ], $message);
+    }
+
+    /**
+     * Paginated list with each row transformed through a JsonResource class.
+     *
+     * @param  class-string<JsonResource>  $resourceClass
+     */
+    public static function paginatedResources(
+        Request $request,
+        LengthAwarePaginator $paginator,
+        string $resourceClass,
+        string $message = 'OK'
+    ): JsonResponse {
+        $paginator->getCollection()->transform(
+            fn ($model) => (new $resourceClass($model))->resolve($request)
+        );
+
+        return self::paginated($paginator, $message);
     }
 }
